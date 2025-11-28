@@ -2,17 +2,20 @@
 
 ## Ortam (Environment)
 
-Bir tarlada 25 tane bitkinin 25 tane hücre içerisine yerleştirilmesiyle oluşturulan 5x5 bir tarla içinde, sulama robotu, her bir hücredeki bitki için ideal sulama miktarını bulmak zorundadır. Hava durumu koşulları topraktaki nemin buharlaşmasına ya da artmasına sebep olan dış koşulları oluşturur. Ajanın tarla içerisinde dolaşarak her bir hücre için sulama/sulamama kararı vererek o hücre için ideal nem miktarını koruması beklenir.
+25 tane bitkinin 25 hücre içerisine yerleştirilmesiyle oluşturulan 5x5 bir tarla içinde, sulama robotu, her bir hücredeki bitki için ideal sulama miktarını bulmak zorundadır. Ajanın tarla içerisinde dolaşarak her bir hücre için sulama/sulamama kararı vererek o hücre için ideal nem miktarını koruması beklenir. Aynı zamanda bütün tarlanın hücrelerinden kaç tanesinin ideal nemden uzak olduğunu da bilir.
 
 ## Durum (State)
 
 Sistemdeki bir state, sulama robotunun satır ve sütun konumları, robotun bulunduğu hücrenin o anki nem seviyesi, ve sistem genelindeki toplam nem seviyesi kötü olan hücre sayısına göre hesaplanan global panik seviyesinden oluşmaktadır.
 
-Robotun bütün hücrelerdeki anlık nem seviyesini bilmesi, state değerinde exponential bir büyümeye sebep olacağından dolayı, robotun görebileceği tek hücrenin o an içinde bulunduğu hücre olması kısıtı getirilerek sistemdeki muhtemel state sayısı ciddi ölçüde azaltılmıştır. 
+Robotun bütün hücrelerdeki anlık nem seviyesini bilmesi, state değerinde üssel bir büyümeye sebep olacağından dolayı, robotun görebileceği tek hücrenin o an içinde bulunduğu hücre olması kısıtı getirilerek sistemdeki muhtemel state sayısı ciddi ölçüde azaltılmıştır. 
+
+Eğer robotun bütün hücrelerdeki nem değerlerini bilmesine izin verilmiş olsaydı her bir hücredeki nem oranları hesabı üssel bir şekilde büyüyeceğinden dolayı hesaplanması gereken state değeri çok büyük bir rakama çıkacaktı. Dolayısıyla robotun görüşü kısıtlanarak sadece içinde bulunduğu hücrenin durumunu bilmesi ve diğer hücrelere karşı tamamen kör davranması sağlanmıştır.
 
 State Değerleri:
 
-Robot satır konumu, robot sütun konumu, toprak nem dereceleri, global panik seviyesi ⇒ 5*5*3*3
+Robot satır konumu, robot sütun konumu, toprak nem dereceleri, global panik seviyesi ⇒ 5x5x3x3
+
 
 1. Robot Row (0-4)
 2. Robot Col (0-4)
@@ -23,13 +26,13 @@ Robot satır konumu, robot sütun konumu, toprak nem dereceleri, global panik se
 
 **Buckets:**
 
-Tara ortamı içerisindeki her hücrenin bir nem değeri float tipinde oluşturulmaktadır. Fakat bu değerler continuous olduğundan dolayı. Q tablosuna eklemek için her bir değeri eklemek mümkün olmadığından BUCKET mantığı bu continuous veriyi discrete veriye çevirerek Q tablosuna ekler.
+Tarla ortamı içerisindeki her hücrenin nem değeri float tipinde oluşturulmaktadır. Fakat bu değerler continuous olduğundan dolayı Q tablosu için discrete hale getirip her bir değeri eklemek mümkün olmadığından BUCKET mantığı bu continuous veriyi discrete veriye çevirerek Q tablosuna ekler.
 
-Her bir BUCKET değeri hücrenin nem değerini hangi yüzde aralığına girdiğini gösteren bir etiketi ifade etmektedir.
+Her bir BUCKET değeri hücrenin nem değerinin hangi yüzde aralığına girdiğini gösteren bir etiketi ifade etmektedir.
 
 **Global Panik Seviyesi:**
 
-Tarla ortamında kaç hücrenin ideal durumdan uzak olduğunu gösteren değerlerdir. Üç farklı değer alabilen panik seviyesi için; PANIC_CALM 0-3 aralığını, PANIC_WORRIED 4-10 aralığını ve PANIC_CRITICAL ise 10dan fazla hücrenin kötü olduğunu gösterir.
+Tarla ortamında kaç hücrenin ideal durumdan uzak olduğunu gösteren değerlerdir. Üç farklı değer alabilen panik seviyesi için; PANIC_CALM 0-3 aralığını, PANIC_WORRIED 4-10 aralığını ve PANIC_CRITICAL ise 10'dan fazla hücrenin kötü olduğunu gösterir.
 
 ## Robotun Hareketleri (Actions)
 
@@ -42,15 +45,17 @@ Tarla ortamında kaç hücrenin ideal durumdan uzak olduğunu gösteren değerle
 
 ## Action Mask:
 
-Robot başarılı bir şekilde hücreyi ideal nem oranına getirdikten sonra ideal hücreler içinde gidip gelmesini önlemek ve daha kötü hücreleri keşfetmesini sağlamak için yapabileceği hareketler, action mask ile kısıtlanmış ve robotun döngüye girme riski azaltılmıştır.
+Robot başarılı bir şekilde hücreyi ideal nem oranına getirdikten sonra ideal hücreler içinde gidip gelmesini önlemek ve daha kötü hücreleri keşfetmesini sağlamak için yapabileceği hareketler, action mask ile kısıtlanmış ve robotun döngüye girme riski azaltılmıştır. 
+
+Aynı zamanda dört iterasyon boyunca iki hücre arasında gelip gidiyorsa yeni bir hücreye gitmeye zorlanacak şekilde bir maske de action_mask içinde bulunmaktadır. 
 
 ## Bölüm Tamamlanması kısıtları (Done Condition)
 
-Bir bölümün (episode) ne zaman sonlanacağını belirlemek için üç farklı koşul kullanılmıştır. Bunlar; bir başarı, bir başarısızlık bir de maksimum adım olarak belirlenmiştir.
+Bir bölümün (episode) ne zaman sonlanacağını belirlemek için üç farklı koşul kullanılmıştır. Bunlar; başarı, başarısızlık ve de maksimum adım olarak belirlenmiştir.
 
 **Başarı:**
 
-Bütün hücreler yeşil olursa ajan başarılı bir şekilde görevi gerçekleştirdiğinden episode sonlandırılır. (Positive Reward) Bu seviyeye ulaşmak için bütün hücrelerdeki nem seviyesinin %40-%70 aralığında olması beklenir.
+Bütün hücreler yeşil olursa ajan başarılı bir şekilde görevi gerçekleştirdiğinden bölüm sonlandırılır. (Positive Reward) Bu seviyeye ulaşmak için bütün hücrelerdeki nem seviyesinin %40-%70 aralığında olması beklenir.
 
 **Başarısızlık:** 
 
