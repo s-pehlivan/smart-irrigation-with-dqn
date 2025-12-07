@@ -14,7 +14,7 @@ Robotun bütün hücreleri görebildiği bir senaryoda oluşabilecek muthemel st
 
 State Değerleri:
 
-Robot satır konumu, robot sütun konumu, toprak nem dereceleri, global panik seviyesi ⇒ 4x4x3x3
+Robot satır konumu, robot sütun konumu, toprak nem dereceleri, global panik seviyesi ⇒ $$4x4x3x3$$
 
 1. Robot Row (0-3)
 2. Robot Col (0-3)
