@@ -24,8 +24,8 @@ class IrrigationEnv(gym.Env):
 
     def __init__(self, render_mode=None):
         self.render_mode = render_mode
-        self.num_rows = 5
-        self.num_cols = 5
+        self.num_rows = 4
+        self.num_cols = 4
         self.cell_size = 64
         # Each episode is considered one day. When Max step is reached the episode ends, meaning the day ends
         # Another done condition is  "reaching ideal moisture" for all cells and this will be the SUCCESS result
@@ -36,8 +36,8 @@ class IrrigationEnv(gym.Env):
         # Agent-> Row: (0-5) Col: (0-5)
         # Moisture of current cell (0-2) -> 3 values
         # Global Panic (0-2) -> 3 values 
-        # State = 5x5x3x3
-        self.observation_space = spaces.Discrete(5*5*3*3)
+        # State = 4x4x3x3
+        self.observation_space = spaces.Discrete(4*4*3*3)
         self.action_space = spaces.Discrete(7)
         # This grid simulates each cells's moisture level for each plant on the grid.
         # In order to not to grew the state exponentially, the agent does not see this. 
@@ -68,7 +68,7 @@ class IrrigationEnv(gym.Env):
             bucket = BUCKET_WET
             
         i = row
-        i *= 5 
+        i *= 4 
         i += col
         i *= 3
         i += panic_level
@@ -82,8 +82,8 @@ class IrrigationEnv(gym.Env):
         i = i // 3
         out.append(i % 3) # Panic Level
         i = i // 3
-        out.append(i % 5) # Col
-        i = i // 5
+        out.append(i % 4) # Col
+        i = i // 4
         out.append(i)     # Row
         return list(reversed(out))
     
@@ -104,7 +104,7 @@ class IrrigationEnv(gym.Env):
             # if c == self.num_cols - 1: mask[MOVE_EAST] = 0
             # if c == 0: mask[MOVE_WEST] = 0
         
-        if self.consecutive_stays >=4:
+        if self.consecutive_stays >=3:
             if self.prev_agent_pos is not None:
             # If a move action would take us exactly back to prev_agent_pos, block it.
                 if r < self.num_rows - 1 and (r + 1, c) == self.prev_agent_pos: mask[MOVE_SOUTH] = 0
@@ -192,7 +192,7 @@ class IrrigationEnv(gym.Env):
         if n_dead / total_plants > 0.8:
             terminated = True
             reward -= 500 
-        elif n_ideal / total_plants > 0.8:
+        elif n_ideal / total_plants >= 1:
             terminated = True
             reward += 1000 
         if self.current_step >= self.max_steps:
@@ -214,7 +214,7 @@ class IrrigationEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.moisture_grid = self.np_random.uniform(low=10, high=95, size=(self.num_rows, self.num_cols))
-        self.agent_pos = (self.np_random.integers(0, 5), self.np_random.integers(0, 5))
+        self.agent_pos = (self.np_random.integers(0, 4), self.np_random.integers(0, 4))
         self.weather = self.np_random.integers(0, 3)
         self.current_step = 0        
         self.consecutive_stays = 0

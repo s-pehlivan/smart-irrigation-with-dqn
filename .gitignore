@@ -73,6 +73,9 @@ Thumbs.db
 
 # Ignore all .gif files
 *.gif
+*.jpg
 
-# Exception: Do not ignore (keep) files ending in 0.gif
-!*0.gif
+# Exception: Do not ignore
+!*validation*_0.gif
+!training*.jpg
+!validation*_1.jpg
