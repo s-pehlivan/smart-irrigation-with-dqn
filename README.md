@@ -75,7 +75,6 @@ Bir bölüm için belirlenen maksimum adım sayısına (step/iteration) ulaşıl
 - Robotun kuru bir hücreye su vermeden veya fazla ıslak bir hücreyi kurutmadan hücreden ayrılması robotun -5 ödül almasına sebep olur.
 - Eğer robot, ideal bir hücreye su vermeden veya hücredeki suyu kurutmadan başka bir hücreye geçerse harekete teşvik amaçlı +1 ödül verilir.
 - Nem seviyesi yeterli bir hücreyi sulamak veya kurutmaya gerek olmayan bir hücreyi kurutmak robota -5 ödül kazandırır.
-- Duvara vurmanın ödülü -1’dir.
 
 ## Encode Fonksiyonu
 
