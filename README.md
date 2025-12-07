@@ -39,7 +39,7 @@ Tarla ortamında kaç hücrenin ideal durumdan uzak olduğunu gösteren değerle
 - MOVE_NORTH: Robotun yukarı yönde hareketi
 - MOVE_EAST: Robotun sağa hareketi
 - MOVE_WEST: Robotun sola hareketi
-- WATER_HIGH: Hücrenin nem oranını +35 artırmak
+- WATER_HIGH: Hücrenin nem oranını +50 artırmak
 - WATER_LOW: Hücrenin nem oranını +25 artırmak
 
 ## Action Mask:
