@@ -12,7 +12,7 @@ Robotun bütün hücrelerdeki anlık nem seviyesini bilmesi, state değerinde ü
 
 Eğer robotun bütün hücrelerdeki nem değerlerini bilmesine izin verilmiş olsaydı her bir hücredeki nem oranları hesabı üssel bir şekilde büyüyeceğinden dolayı hesaplanması gereken state değeri çok büyük bir rakama çıkacaktı. Dolayısıyla robotun görüşü kısıtlanarak sadece içinde bulunduğu hücrenin durumunu bilmesi ve diğer hücrelere karşı tamamen kör davranması sağlanmıştır.
 
-Robotun bütün hücreleri görebildiği bir senaryoda oluşabilecek muthemel state sayısı: 4x4x3^16^x3^16^ şeklinde olacağından dolayı, ajanın görüşü kısıtlanarak sadece içinde bulunduğu hücerden haberi olacak şekilde state değeri küçültülmüştür.
+Robotun bütün hücreleri görebildiği bir senaryoda oluşabilecek muthemel state sayısı: $$4x4x3^{16}x3^{16}$$ şeklinde olacağından dolayı, ajanın görüşü kısıtlanarak sadece içinde bulunduğu hücerden haberi olacak şekilde state değeri küçültülmüştür.
 
 State Değerleri:
 
