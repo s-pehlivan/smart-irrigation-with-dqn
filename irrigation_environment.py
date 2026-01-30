@@ -10,6 +10,7 @@ MOVE_EAST = 2
 MOVE_WEST = 3
 WATER_LOW = 4
 WATER_HIGH = 5
+STAY = 6 # YENİ AKSİYON: Bekle / Enerji Tasarrufu
 
 # Hava Durumu Sabitleri
 WEATHER_NORMAL = 0
@@ -31,15 +32,14 @@ class IrrigationEnv(gym.Env):
         obs_dim = 2 + (self.num_rows * self.num_cols) + 3 + 2
         self.observation_space = spaces.Box(low=-1, high=1, shape=(obs_dim,), dtype=np.float32)
 
-        self.action_space = spaces.Discrete(6)
+        # AKSİYON SAYISI 7 OLDU (STAY EKLENDİ)
+        self.action_space = spaces.Discrete(7)
         
         self.moisture_grid = np.zeros((self.num_rows, self.num_cols), dtype=np.float32)
         self.agent_pos = (0,0)
         self.consecutive_stays = 0
         self.current_weather = WEATHER_NORMAL
         
-        # --- YENİ ÖZELLİK: Ziyaret Geçmişi (Loop Önleme) ---
-        # Son 10 konumu tutarak kısa döngüleri tespit edeceğiz
         self.recent_positions = deque(maxlen=10)
 
     def _get_nearest_dry_coords(self):
@@ -71,12 +71,14 @@ class IrrigationEnv(gym.Env):
         return obs
     
     def _get_action_mask(self):
-        mask = np.ones(6, dtype=np.int8)
+        # Maske boyutu 7 oldu
+        mask = np.ones(7, dtype=np.int8)
         r, c = self.agent_pos
 
         if self.consecutive_stays >= 1: 
             mask[WATER_LOW] = 0
             mask[WATER_HIGH] = 0
+            # STAY aksiyonunu maskelemiyoruz, çünkü durmaya devam etmek isteyebilir
         
         if r == 0: mask[MOVE_NORTH] = 0
         if r == self.num_rows - 1: mask[MOVE_SOUTH] = 0
@@ -146,30 +148,33 @@ class IrrigationEnv(gym.Env):
                 reward -= 1.0 
             else:
                 reward -= 0.2
+        
+        # --- YENİ AKSİYON: STAY (BEKLE) ---
+        elif action == STAY:
+            # Enerji Tasarrufu Mantığı:
+            # Sadece tarlada acil iş yoksa durmak ödüllendirilmeli.
+            dry_count = np.sum(self.moisture_grid < 40)
+            
+            if dry_count == 0:
+                reward += 1.0 # Tarlalar iyi durumda, enerjini koruduğun için bravo!
+            else:
+                reward -= 1.0 # Tarlada kuruyan yerler varken tembellik yapma!
 
         self.agent_pos = (row, col)
 
-        # --- YENİ: LOOP CEZASI VE TAKİP ---
-        # Eğer ajan yeni bir yere gittiyse geçmişe bak
+        # --- LOOP CEZASI ---
         if moved:
-            # Eğer gittiği yer son 10 adımda varsa, tekrar etme cezası ver
-            # (Ne kadar yakın zamanda gittiyse o kadar büyük ceza)
             if (row, col) in self.recent_positions:
-                # index 0 en eski, -1 en yeni.
-                # count metodu ile kaç kere gittiğini bulabiliriz
                 visit_count = self.recent_positions.count((row, col))
-                reward -= (visit_count * 0.5) # Tekrar etme cezası
-            
+                reward -= (visit_count * 0.5) 
             self.recent_positions.append((row, col))
 
-        # --- YENİ: ISLAK/KURU HÜCREDE BULUNMA ÖDÜL/CEZASI ---
+        # --- ISLAK/KURU HÜCREDE BULUNMA ---
         current_cell_moisture = self.moisture_grid[row, col]
         
-        if current_cell_moisture > 70: # Mavi (Islak) Hücre
-            # Ajan burayı terk etmeli, burada durdukça ceza yesin
+        if current_cell_moisture > 70: 
             reward -= 0.2
-        elif current_cell_moisture < 40: # Kahverengi (Kuru) Hücre
-            # Ajan buraya geldiği için (sulamasa bile) küçük bir "doğru yerdesin" ödülü
+        elif current_cell_moisture < 40: 
             reward += 0.2
 
         if self.agent_pos == (new_row, new_col) and not moved:
@@ -228,7 +233,7 @@ class IrrigationEnv(gym.Env):
         self.current_step = 0        
         self.consecutive_stays = 0
         self.current_weather = self.np_random.choice([WEATHER_NORMAL, WEATHER_HOT, WEATHER_RAINY])
-        self.recent_positions.clear() # Geçmişi temizle
+        self.recent_positions.clear() 
         
         obs = self.get_observation()        
         return obs, {"action_mask": self._get_action_mask()}
