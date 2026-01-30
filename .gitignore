@@ -12,6 +12,8 @@ ENV/
 env.bak/
 venv.bak/
 
+*.pth
+
 # --- Jupyter Notebook ---
 .ipynb_checkpoints
 *.nbconvert.ipynb
@@ -74,8 +76,10 @@ Thumbs.db
 # Ignore all .gif files
 *.gif
 *.jpg
+*.png
 
 # Exception: Do not ignore
-!*validation*_0.gif
+
 !training*.jpg
-!validation*_1.jpg
+!validation_run.gif
+!training_plot.png
