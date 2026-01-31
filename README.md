@@ -129,4 +129,5 @@ Training graphs show that the agent initially moves randomly (-1500 scores), but
 
 
 
+![training_plot_dqn.png](./training_plot_dqn.png)
 ![validation_run.gif](./validation_run.gif)
