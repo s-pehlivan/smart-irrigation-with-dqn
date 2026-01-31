@@ -8,7 +8,7 @@ from irrigation_environment import IrrigationEnv
 from dqn import Agent
 
 # Eğitim Ayarları
-NUM_EPISODES = 2000 
+NUM_EPISODES = 1000 
 PRINT_INTERVAL = 50
 ANIMATION_LOG_INTERVAL = 250 # Her 250 bölümde bir animasyon için kayıt al
 

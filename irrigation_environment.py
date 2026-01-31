@@ -10,7 +10,7 @@ MOVE_EAST = 2
 MOVE_WEST = 3
 WATER_LOW = 4
 WATER_HIGH = 5
-STAY = 6 # YENİ AKSİYON: Bekle / Enerji Tasarrufu
+STAY = 6 # Bekle / Enerji Tasarrufu
 
 # Hava Durumu Sabitleri
 WEATHER_NORMAL = 0
@@ -28,6 +28,9 @@ class IrrigationEnv(gym.Env):
         self.max_steps = 1000 
         self.current_step = 0
         
+        # Tahliye Noktası (Sağ Alt Köşe)
+        self.drainage_point = (self.num_rows - 1, self.num_cols - 1)
+
         # 10x10 Grid (100) + 2 Konum + 3 Hava Durumu + 2 HEDEF YÖNÜ = 107
         obs_dim = 2 + (self.num_rows * self.num_cols) + 3 + 2
         self.observation_space = spaces.Box(low=-1, high=1, shape=(obs_dim,), dtype=np.float32)
@@ -106,11 +109,29 @@ class IrrigationEnv(gym.Env):
             evaporation = np.random.uniform(0.2, 0.5, size=(self.num_rows, self.num_cols))
             self.moisture_grid -= evaporation
         elif self.current_weather == WEATHER_RAINY:
-            rain = np.random.uniform(0.1, 0.3, size=(self.num_rows, self.num_cols))
+            rain = np.random.uniform(0.05, 0.15, size=(self.num_rows, self.num_cols))
             self.moisture_grid += rain
         else:
             evaporation = np.random.uniform(0.05, 0.15, size=(self.num_rows, self.num_cols))
             self.moisture_grid -= evaporation
+
+        # --- DRENAJ KONTROLÜ (GÜNCELLENMİŞ MANTIK) ---
+        drainage_active = False
+        
+        # 1. Aşırı ıslak (Koyu Mavi > 80) hücreleri say
+        extreme_wet_indices = self.moisture_grid > 80
+        extreme_wet_count = np.sum(extreme_wet_indices)
+        total_cells = self.num_rows * self.num_cols
+        
+        # 2. Şart: %50'den fazlası aşırı ıslak mı?
+        is_flooded = extreme_wet_count > (total_cells * 0.5)
+
+        # Eğer yağmur yağıyorsa VE ajan (9,9) noktasındaysa VE bekleme yapıyorsa VE sel durumu varsa
+        if self.current_weather == WEATHER_RAINY and self.agent_pos == self.drainage_point and action == STAY and is_flooded:
+            drainage_active = True
+            # Güçlü bir kurutma etkisi (Yağmuru bastırır)
+            drain_effect = np.random.uniform(0.2, 0.4, size=(self.num_rows, self.num_cols))
+            self.moisture_grid -= drain_effect
 
         # --- DURUM ANALİZİ ---
         prev_dist = self._get_distance_to_nearest_dry(self.agent_pos)
@@ -149,16 +170,18 @@ class IrrigationEnv(gym.Env):
             else:
                 reward -= 0.2
         
-        # --- YENİ AKSİYON: STAY (BEKLE) ---
+        # --- STAY (BEKLE) AKSİYONU VE DRENAJ ÖDÜLÜ ---
         elif action == STAY:
-            # Enerji Tasarrufu Mantığı:
-            # Sadece tarlada acil iş yoksa durmak ödüllendirilmeli.
-            dry_count = np.sum(self.moisture_grid < 40)
-            
-            if dry_count == 0:
-                reward += 1.0 # Tarlalar iyi durumda, enerjini koruduğun için bravo!
+            if drainage_active:
+                # Drenajı aktif tutmak büyük bir kriz yönetimi başarısıdır
+                reward += 5.0 
             else:
-                reward -= 1.0 # Tarlada kuruyan yerler varken tembellik yapma!
+                # Normal enerji tasarrufu mantığı
+                dry_count = np.sum(self.moisture_grid < 40)
+                if dry_count == 0:
+                    reward += 1.0 # İş yokken bekleme ödülü
+                else:
+                    reward -= 1.0 # İş varken tembellik cezası
 
         self.agent_pos = (row, col)
 
@@ -190,7 +213,14 @@ class IrrigationEnv(gym.Env):
             diff = prev_dist - curr_dist
             reward += diff * 1.0 
 
-        # --- KRİTİK CEZA ---
+        # --- CEZALAR (YENİDEN DÜZENLENDİ) ---
+        
+        # 1. SEL TEHLİKESİ CEZASI (YENİ)
+        # Tarladaki her "aşırı ıslak" (>80) hücre için ceza veriyoruz.
+        # Bu, ajanı sel oluştuğunda hemen müdahale etmeye (drenaj) zorlar.
+        reward -= (extreme_wet_count * 0.05)
+
+        # 2. KURAKLIK CEZASI
         critical_count = np.sum(self.moisture_grid < 30)
         reward -= (critical_count * 0.01) 
 
@@ -216,7 +246,9 @@ class IrrigationEnv(gym.Env):
             "success_ratio": success_ratio,
             "action_mask": self._get_action_mask(),
             "weather": self.current_weather,
-            "critical_count": critical_count
+            "critical_count": critical_count,
+            "drain_active": drainage_active,
+            "flood_level": extreme_wet_count # Debug için eklendi
         }
         return obs, reward, terminated, False, info
 
@@ -263,6 +295,11 @@ class IrrigationEnv(gym.Env):
                 color = np.clip(np.array(base_color) + np.array(bg_tint), 0, 255).astype(np.uint8)
                 grid_img[y_start:y_end, x_start:x_end] = color 
                 
+                # --- TAHLİYE NOKTASI (Siyah Kuyu) ---
+                if (r, c) == self.drainage_point:
+                    pad = int(self.cell_size * 0.4)
+                    grid_img[y_start+pad:y_end-pad, x_start+pad:x_end-pad] = [20, 20, 20] 
+
                 if (r, c) == self.agent_pos:
                     pad = int(self.cell_size * 0.25)
                     grid_img[y_start+pad:y_end-pad, x_start+pad:x_end-pad] = [255, 50, 50] 
