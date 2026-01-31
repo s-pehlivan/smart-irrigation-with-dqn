@@ -83,3 +83,4 @@ Thumbs.db
 !training*.jpg
 !validation_run.gif
 !training_plot.png
+!training_plot_dqn.png
